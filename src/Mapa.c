@@ -1,37 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "game.h"
 #include "raylib.h"
 
 #define LINHAS 20
 #define COLUNAS 40
-
-typedef struct{
-    int x;
-    int y;
-}Posicao;
-
-typedef enum{
-    PAREDE,
-    PELLET,
-    PACMAN_INICIO,
-    FANTASMA_INICIO,
-    PORTAL,
-    POWER_PELLET,
-    VAZIO
-}Blocos;
-
-typedef struct{
-    Blocos** matriz;
-    Posicao pacman_inicio;
-    Posicao* fantasmas_inicio;
-    Posicao* portais;
-    int numFantasmas;
-    int numPortais;
-    int numPellets;
-    int linhas;
-    int colunas;
-}Mapa;
 
 
 Mapa* lerMapa(const char *arquivo){
@@ -139,33 +113,70 @@ Mapa* lerMapa(const char *arquivo){
 
 }
 
+// void printarMapa(Mapa* mapa){
+//     if(mapa == NULL) return;
+
+//     for(int i = 0; i < mapa->linhas; i++){
+//         for(int j = 0; j < mapa->colunas; j++){
+            
+//             if(mapa->matriz[i][j] == PAREDE){
+//                 DrawRectangle(j*40, i*40 , 40 , 40 , BLUE);
+//             }
+
+//             else if(mapa->matriz[i][j] == PORTAL){
+//                 DrawRectangle(j*40, i*40 , 40 , 40 , PINK);
+//             }
+
+//             else if(mapa->matriz[i][j] == POWER_PELLET){
+//                 DrawRectangle(j*40, i*40 , 40 , 40 , BLACK);
+//                 DrawCircle((j*40) + 20, (i*40) + 20 , 5 , GREEN);
+//             }
+
+//             else if(mapa->matriz[i][j] == PELLET){
+//                 DrawRectangle(j*40, i*40 , 40 , 40 , BLACK);
+//                 DrawCircle((j*40) + 20, (i*40) + 20 , 5 , WHITE);
+//             }
+
+//             else if(mapa->matriz[i][j] == VAZIO){
+//                 DrawRectangle(j*40, i*40 , 40 , 40 , BLACK);
+//             }
+//         }
+//     }
+// }
+
+
 void printarMapa(Mapa* mapa){
     if(mapa == NULL) return;
+
+    int tb = TAMANHO_BLOCO; // Atalho para facilitar a leitura
+    int offset = tb / 2;    // Metade do bloco (para centralizar círculos)
 
     for(int i = 0; i < mapa->linhas; i++){
         for(int j = 0; j < mapa->colunas; j++){
             
+            int posX = j * tb;
+            int posY = i * tb;
+
             if(mapa->matriz[i][j] == PAREDE){
-                DrawRectangle(j*40, i*40 , 40 , 40 , BLUE);
+                DrawRectangle(posX, posY, tb, tb, BLUE);
             }
 
             else if(mapa->matriz[i][j] == PORTAL){
-                DrawRectangle(j*40, i*40 , 40 , 40 , PINK);
+                DrawRectangle(posX, posY, tb, tb, PINK);
             }
 
             else if(mapa->matriz[i][j] == POWER_PELLET){
-                DrawRectangle(j*40, i*40 , 40 , 40 , BLACK);
-                DrawCircle((j*40) + 20, (i*40) + 20 , 5 , GREEN);
+                // Fundo preto (limpar parede se houver)
+                // DrawRectangle(posX, posY, tb, tb, BLACK); 
+                DrawCircle(posX + offset, posY + offset, tb/3, GREEN); // Raio proporcional
             }
 
             else if(mapa->matriz[i][j] == PELLET){
-                DrawRectangle(j*40, i*40 , 40 , 40 , BLACK);
-                DrawCircle((j*40) + 20, (i*40) + 20 , 5 , WHITE);
+                // DrawRectangle(posX, posY, tb, tb, BLACK);
+                DrawCircle(posX + offset, posY + offset, tb/8, WHITE); // Raio bem pequeno
             }
-
-            else if(mapa->matriz[i][j] == VAZIO){
-                DrawRectangle(j*40, i*40 , 40 , 40 , BLACK);
-            }
+            
+            // VAZIO não precisa desenhar nada (já é o fundo preto da janela)
         }
     }
 }
