@@ -58,8 +58,12 @@ typedef struct {
 typedef struct {
     Posicao gridPos;
     Vector2 pixelPos;
+    Direcao currentDir; // Adicionado: Direção atual
+    Direcao nextDir;    // Adicionado: Buffer de entrada (para virar suavemente)
     int score;
     int lives;
+    bool isPoweredUp;   // Adicionado: Se comeu o Power Pellet
+    float powerUpTimer; // Adicionado: Tempo do efeito
 } Pacman;
 
 typedef struct {
