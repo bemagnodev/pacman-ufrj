@@ -9,7 +9,7 @@
 
 
 Mapa* lerMapa(const char *arquivo){
-    FILE* f= fopen(arquivo, "r");
+    FILE* f = fopen(arquivo, "r");
     if (f == NULL) {
         perror("Erro ao abrir o arquivo do mapa");
         return NULL;
@@ -112,38 +112,6 @@ Mapa* lerMapa(const char *arquivo){
     return mapa;
 
 }
-
-// void printarMapa(Mapa* mapa){
-//     if(mapa == NULL) return;
-
-//     for(int i = 0; i < mapa->linhas; i++){
-//         for(int j = 0; j < mapa->colunas; j++){
-            
-//             if(mapa->matriz[i][j] == PAREDE){
-//                 DrawRectangle(j*40, i*40 , 40 , 40 , BLUE);
-//             }
-
-//             else if(mapa->matriz[i][j] == PORTAL){
-//                 DrawRectangle(j*40, i*40 , 40 , 40 , PINK);
-//             }
-
-//             else if(mapa->matriz[i][j] == POWER_PELLET){
-//                 DrawRectangle(j*40, i*40 , 40 , 40 , BLACK);
-//                 DrawCircle((j*40) + 20, (i*40) + 20 , 5 , GREEN);
-//             }
-
-//             else if(mapa->matriz[i][j] == PELLET){
-//                 DrawRectangle(j*40, i*40 , 40 , 40 , BLACK);
-//                 DrawCircle((j*40) + 20, (i*40) + 20 , 5 , WHITE);
-//             }
-
-//             else if(mapa->matriz[i][j] == VAZIO){
-//                 DrawRectangle(j*40, i*40 , 40 , 40 , BLACK);
-//             }
-//         }
-//     }
-// }
-
 
 void printarMapa(Mapa* mapa){
     if(mapa == NULL) return;

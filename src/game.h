@@ -70,6 +70,9 @@ typedef struct {
     int currentLevel;
     bool isPaused;
     bool gameOver;
+    int score;             // Pontuação global
+    int lives;             // Vidas globais
+    char rankingMessage[128]; // Mensagem do ranking
 } Game;
 
 Mapa* lerMapa(const char *arquivo);
