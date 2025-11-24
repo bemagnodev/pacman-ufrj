@@ -8,111 +8,113 @@
 #include <stdio.h>
 
 int main(void) {
+    // Calcula o tamanho da tela baseado nas constantes do game.h
     const int screenWidth = COLUNAS * TAMANHO_BLOCO; 
     const int screenHeight = (LINHAS * TAMANHO_BLOCO) + 40; 
 
-    InitWindow(screenWidth, screenHeight, "Pac-Man - Jogo Completo");
+    InitWindow(screenWidth, screenHeight, "Pac-Man UFRJ - 2025.2");
     SetTargetFPS(60);
 
     // Inicializa estruturas do jogo
     Game game = {0};
     GameState state = {0};
     
-    // Inicializa mensagem de ranking vazia
+    // Inicializa mensagem de ranking vazia para evitar lixo de memória
     game.rankingMessage[0] = '\0';
     
-    // Inicia o estado do jogo
+    // Inicia o estado do jogo (Carrega mapa, zera scores, etc.)
     InitGameState(&game, &state);
     
     // Flags para controle do menu de pausa
     bool shouldQuit = false;
     bool shouldStartNew = false;
-
-    // CORREÇÃO: Variável para controlar debounce do TAB
     bool tabWasPressed = false;
 
     // ===== LOOP PRINCIPAL DO JOGO =====
     while (!WindowShouldClose() && !shouldQuit) {
         float delta = GetFrameTime();
 
-        // ===== INPUT GLOBAL =====
+        // ==========================================
+        // 1. INPUTS GLOBAIS
+        // ==========================================
         
         // Tecla TAB para pausar (apenas durante o jogo)
         if (state.currentScreen == SCREEN_PLAYING) {
             bool tabIsPressed = IsKeyDown(KEY_TAB);
-            
-            // Detecta a BORDA de subida (momento que pressiona)
             if (tabIsPressed && !tabWasPressed) {
                 game.isPaused = !game.isPaused;
             }
-            
             tabWasPressed = tabIsPressed;
         }
 
-        // ===== ATUALIZAÇÃO =====
-        
+        // ==========================================
+        // 2. ATUALIZAÇÃO (UPDATE)
+        // ==========================================
+        if (game.saveMessageTimer > 0) {
+            game.saveMessageTimer -= delta;
+        }
         if (game.isPaused) {
-            // Se estiver pausado, apenas gerencia o menu
+            // Se estiver pausado, apenas gerencia o menu de pausa
             HandlePauseMenu(&game, &shouldQuit, &shouldStartNew);
             
-            // Se deve começar novo jogo
             if (shouldStartNew) {
                 StartNewGame(&game, &state);
                 shouldStartNew = false;
-                game.isPaused = false; // IMPORTANTE: Despause após novo jogo
+                game.isPaused = false; 
             }
         } 
         else {
-            // Atualiza o estado do jogo (colisões, vitória, derrota)
-            UpdateGameState(&game, &state, delta);
-            
-            // Atualiza elementos apenas durante a gameplay
+            // Lógica enquanto o jogo roda (não pausado)
             if (state.currentScreen == SCREEN_PLAYING && game.mapa != NULL) {
                 
-                // ===== MOVIMENTAÇÃO DO PAC-MAN =====
+                // Movemos as entidades
                 UpdatePacman(&game, delta);
-                
-                // ===== ATUALIZAÇÃO DOS FANTASMAS =====
                 UpdateGhosts(&game, delta);
                 
-                // ===== TESTE TEMPORÁRIO (pode remover depois) =====
-                if (IsKeyPressed(KEY_P)) {
-                    ScareGhosts(&game);
+
+                // CHEAT: Pular de Nível (Tecla L)
+                if (IsKeyPressed(KEY_L)) {
+                    // Força a vitória esvaziando os pellets
+                    if (game.mapa != NULL) game.mapa->numPellets = 0;
                 }
+                
             }
+
+            // 3º: Verificamos as regras (Colisões, Vitória, Derrota)
+            // É importante chamar isso DEPOIS do movimento para a colisão ser exata
+            UpdateGameState(&game, &state, delta);
         }
 
-        // ===== RENDERIZAÇÃO =====
+        // ==========================================
+        // 3. RENDERIZAÇÃO (DRAW)
+        // ==========================================
         
         BeginDrawing();
+        ClearBackground(BLACK); // Limpa a tela
         
-        ClearBackground(BLACK);
-        
-        // Desenha baseado na tela atual
         switch (state.currentScreen) {
             case SCREEN_MENU:
                 DrawMenuScreen();
                 break;
                 
             case SCREEN_PLAYING:
-                // Desenha o jogo
                 if (game.mapa != NULL) {
                     printarMapa(game.mapa);
+                    if (!state.isInvulnerable || (int)(GetTime() * 10) % 2 == 0) {
+                        DrawPacman(&game);// Pacman desenhado antes dos fantasmas ou depois? Depois = em cima.
+                    }
                     DrawGhosts(&game);
-                    DrawPacman(&game);
-                    
-                    // Desenha HUD
                     DrawHUD(&game, &state);
                 }
                 
-                // Se estiver pausado, desenha menu por cima
+                // Overlay de Pausa
                 if (game.isPaused) {
                     DrawPauseOverlay(&game, &shouldQuit, &shouldStartNew);
                 }
                 break;
                 
             case SCREEN_GAME_OVER:
-                // Desenha o jogo de fundo
+                // Desenha o jogo congelado no fundo
                 if (game.mapa != NULL) {
                     printarMapa(game.mapa);
                     DrawGhosts(&game);
@@ -122,7 +124,6 @@ int main(void) {
                 break;
                 
             case SCREEN_VICTORY:
-                // Desenha o jogo de fundo
                 if (game.mapa != NULL) {
                     printarMapa(game.mapa);
                     DrawGhosts(&game);
@@ -138,10 +139,11 @@ int main(void) {
         EndDrawing();
     }
 
-    // ===== LIMPEZA =====
+    // ==========================================
+    // 4. LIMPEZA DE MEMÓRIA
+    // ==========================================
     
     UnloadGhosts(&game);
-    
     if (game.mapa != NULL) {
         descartarMapa(game.mapa);
     }
@@ -150,4 +152,3 @@ int main(void) {
 
     return 0;
 }
-

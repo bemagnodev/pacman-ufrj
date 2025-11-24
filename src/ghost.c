@@ -58,15 +58,15 @@ void UpdateGhosts(Game* game, float delta) {
     float margemCentro = 2.0f;
     
     Vector2 mousePos = GetMousePosition();
-    int alvoX = (int)(mousePos.x / TAMANHO_BLOCO);
-    int alvoY = (int)(mousePos.y / TAMANHO_BLOCO);
+    int alvoX = game->pacman.gridPos.x;
+    int alvoY = game->pacman.gridPos.y;
 
     for (int i = 0; i < game->ghostCount; i++) {
         Ghost* g = &game->ghosts[i];
 
         if (!g->isActive) continue;
 
-        float velocidadeAtual = g->isVulnerable ? 3.0f * TAMANHO_BLOCO : 4.0f * TAMANHO_BLOCO;
+        float velocidadeAtual = g->isVulnerable ? 2.0f * TAMANHO_BLOCO : 4.0f * TAMANHO_BLOCO;
         if(g->isVulnerable) {
             g->vulnerableTimer -= delta;
             if(g->vulnerableTimer <= 0) { g->isVulnerable = false; g->color = g->originalColor; }
@@ -103,7 +103,7 @@ void UpdateGhosts(Game* game, float delta) {
                 if (qtdPossiveis > 1 || bateuFrente || qtdPossiveis == 0) {
                     if (qtdPossiveis > 0) {
                         
-                        if ((i == 0 || i == 1) && !g->isVulnerable) {
+                        if (i == 0 && !g->isVulnerable) {
                             float menorDistancia = FLT_MAX;
                             int melhorIndice = 0;
 
@@ -134,12 +134,40 @@ void UpdateGhosts(Game* game, float delta) {
         } else {
             g->podeDecidir = true;
         }
-    }
+
+        // --- LÓGICA DE PORTAL PARA FANTASMAS ---
+        int currentGridX = (int)((g->position.x + TAMANHO_BLOCO / 2) / TAMANHO_BLOCO);
+        int currentGridY = (int)((g->position.y + TAMANHO_BLOCO / 2) / TAMANHO_BLOCO);
+
+        if (game->mapa->matriz[currentGridY][currentGridX] == PORTAL) {
+             if (game->mapa->numPortais >= 2) {
+                // Verifica se está ENTRANDO (saindo da borda)
+                bool entering = false;
+                if (currentGridX == 0 && g->direction.x < 0) entering = true;
+                else if (currentGridX == game->mapa->colunas - 1 && g->direction.x > 0) entering = true;
+                
+                if (entering) {
+                    int idx = -1;
+                    for(int k=0; k<game->mapa->numPortais; k++) {
+                        if (game->mapa->portais[k].x == currentGridX && game->mapa->portais[k].y == currentGridY) {
+                            idx = k; break;
+                        }
+                    }
+                    if (idx != -1) {
+                        int dest = (idx + 1) % game->mapa->numPortais;
+                        g->position.x = game->mapa->portais[dest].x * TAMANHO_BLOCO;
+                        g->position.y = game->mapa->portais[dest].y * TAMANHO_BLOCO;
+                    }
+                }
+             }
+        }
+    } 
 }
 
 void DrawGhosts(Game* game) {
     int offset = TAMANHO_BLOCO / 2;
     int raio = (TAMANHO_BLOCO / 2) - 2;
+    
 
     for (int i = 0; i < game->ghostCount; i++) {
         if (!game->ghosts[i].isActive) continue; 

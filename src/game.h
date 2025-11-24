@@ -3,12 +3,14 @@
 
 #include "raylib.h"
 #include <stdlib.h> 
+#include <stdbool.h>
 
+// --- Constantes Globais ---
 #define LINHAS 20
 #define COLUNAS 40
-// #define TAMANHO_BLOCO 40 
 #define TAMANHO_BLOCO 20
 
+// --- Enums ---
 typedef enum {
     PAREDE,
     PELLET,
@@ -19,11 +21,18 @@ typedef enum {
     VAZIO
 } Blocos;
 
+// --- Structs Básicas ---
 typedef struct {
     int x;
     int y;
-} Posicao;
+} Posicao; // Usado para Grid
 
+typedef struct {
+    int x;
+    int y;
+} Direcao;
+
+// --- Struct Mapa (Membro 1) ---
 typedef struct {
     Blocos** matriz;
     Posicao pacman_inicio;
@@ -36,14 +45,9 @@ typedef struct {
     int colunas;
 } Mapa;
 
+// --- Struct Fantasma (Membro 3 - Você) ---
 typedef struct {
-    int x;
-    int y;
-} Direcao;
-
-
-typedef struct {
-    Vector2 position;
+    Vector2 position; // Posição em pixels
     Direcao direction;
     Color color;
     Color originalColor;
@@ -55,28 +59,36 @@ typedef struct {
     bool isActive; 
 } Ghost;
 
+// --- Struct Pac ---
 typedef struct {
     Posicao gridPos;
     Vector2 pixelPos;
+    Posicao direcaoAtual;    
+    Posicao proximaDirecao;
     int score;
     int lives;
 } Pacman;
 
+// --- Struct Principal Game ---
 typedef struct {
     Mapa* mapa;            
     Pacman pacman;         
     Ghost* ghosts;         
     int ghostCount;        
+    
     int currentLevel;
     bool isPaused;
     bool gameOver;
+    
     int score;             // Pontuação global
     int lives;             // Vidas globais
-    char rankingMessage[128]; // Mensagem do ranking
+    char rankingMessage[128]; 
+    float saveMessageTimer;
 } Game;
 
+// --- Protótipos Globais (Membro 1) ---
 Mapa* lerMapa(const char *arquivo);
 void printarMapa(Mapa* mapa);
 void descartarMapa(Mapa* mapa);
 
-#endif 
+#endif // GAME_H

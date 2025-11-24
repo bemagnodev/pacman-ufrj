@@ -24,71 +24,47 @@ void InitGameState(Game* game, GameState* state) {
 }
 
 void StartNewGame(Game* game, GameState* state) {
-    // Limpa o mapa antigo se existir
-    if (game->mapa != NULL) {
-        descartarMapa(game->mapa);
-    }
-    
-    // Limpa os fantasmas antigos
+    if (game->mapa != NULL) descartarMapa(game->mapa);
     UnloadGhosts(game);
     
-    // Reinicia valores
+    // Reseta status
     game->score = 0;
     game->lives = INITIAL_LIVES;
-    game->currentLevel = 1;
+    game->currentLevel = 1; // Começa no nível 1
     game->gameOver = false;
     game->isPaused = false;
     
     state->invulnerabilityTimer = 0.0f;
     state->isInvulnerable = false;
-    state->deathAnimationTimer = 0.0f;
-    state->transitionTimer = 0.0f;
     
-    // Carrega o mapa
-    game->mapa = lerMapa("nivel/mapa.txt");
+    // Carrega mapa1.txt
+    char filename[30];
+    sprintf(filename, "mapa%d.txt", game->currentLevel);
+    game->mapa = lerMapa(filename);  
     
     if (game->mapa != NULL) {
-        // Inicializa o Pac-Man (CRÍTICO!)
         InitPacman(game);
-        
-        game->pacman.score = 0;
-        game->pacman.lives = INITIAL_LIVES;
-        
-        // Inicializa fantasmas
         InitGhosts(game);
-        
-        // Conta pellets totais
         state->totalPelletsInLevel = game->mapa->numPellets;
     }
-    
     state->currentScreen = SCREEN_PLAYING;
 }
 
 void LoadNextLevel(Game* game, GameState* state) {
     game->currentLevel++;
+    if (game->currentLevel > MAX_LEVEL) game->currentLevel = 1; 
     
-    // Se passou do último nível, volta ao primeiro (loop)
-    if (game->currentLevel > MAX_LEVEL) {
-        game->currentLevel = 1;
-    }
-    
-    // Limpa o mapa e fantasmas atuais
-    if (game->mapa != NULL) {
-        descartarMapa(game->mapa);
-    }
+    if (game->mapa != NULL) descartarMapa(game->mapa);
     UnloadGhosts(game);
     
-    // Recarrega o mapa
-    game->mapa = lerMapa("nivel/mapa.txt");
+    // Carrega mapaX.txt
+    char filename[30];
+    sprintf(filename, "mapa%d.txt", game->currentLevel);
+    game->mapa = lerMapa(filename);  
     
     if (game->mapa != NULL) {
-        // Reinicia Pac-Man (CRÍTICO!)
         InitPacman(game);
-        
-        // Reinicia fantasmas
         InitGhosts(game);
-        
-        // Atualiza pellets totais
         state->totalPelletsInLevel = game->mapa->numPellets;
     }
     
@@ -100,21 +76,12 @@ void LoadNextLevel(Game* game, GameState* state) {
 void ResetPacmanPosition(Game* game) {
     if (game->mapa == NULL) return;
     
-    // Reinicia o Pac-Man (CRÍTICO!)
+    // Reinicia o Pac-Man  
     InitPacman(game);
     
     // Reinicia os fantasmas nas posições iniciais
-    for (int i = 0; i < game->ghostCount; i++) {
-        int gridX = game->mapa->fantasmas_inicio[i].x;
-        int gridY = game->mapa->fantasmas_inicio[i].y;
-        
-        game->ghosts[i].position.x = gridX * TAMANHO_BLOCO;
-        game->ghosts[i].position.y = gridY * TAMANHO_BLOCO;
-        game->ghosts[i].isActive = true;
-        game->ghosts[i].isVulnerable = false;
-        game->ghosts[i].vulnerableTimer = 0.0f;
-        game->ghosts[i].color = game->ghosts[i].originalColor;
-    }
+    
+    
 }
 
 // === DETECÇÃO DE COLISÕES ===
@@ -391,7 +358,11 @@ void DrawHUD(Game* game, GameState* state) {
         DrawText(pelletsText, 560, hudY, 20, LIGHTGRAY);
     }
     
-    if (state->isInvulnerable) {
-        DrawText("INVULNERAVEL!", screenWidth / 2 - 70, 10, 20, SKYBLUE);
+    // --- ÁREA DE MENSAGENS ---
+    if (game->saveMessageTimer > 0) {
+        DrawText("JOGO SALVO!", 300, 10, 20, GREEN); 
+    }
+    else if (state->isInvulnerable) {
+        DrawText("INVULNERAVEL!", screenWidth/2 - 70, 10, 20, SKYBLUE);
     }
 }

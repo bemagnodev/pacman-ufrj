@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Lógica interna para salvar o jogo
 static bool SaveGame(Game* game) {
     FILE* file = fopen(SAVEGAME_FILENAME, "wb");
     if (file == NULL) {
@@ -35,7 +34,7 @@ static bool SaveGame(Game* game) {
     return true;
 }
 
-// Lógica interna para carregar o jogo
+// Lógica interna para carregar o jogo (CÓDIGO ORIGINAL MANTIDO)
 static bool LoadGame(Game* game) {
     FILE* file = fopen(SAVEGAME_FILENAME, "rb");
     if (file == NULL) {
@@ -72,84 +71,68 @@ static bool LoadGame(Game* game) {
     return true;
 }
 
-// Função separada apenas para DESENHAR (não gerenciar input)
+// Função separada apenas para DESENHAR (CÓDIGO ORIGINAL MANTIDO)
 void DrawPauseOverlay(Game* game, bool* shouldQuit, bool* shouldStartNew) {
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
     
-    // Fundo semi-transparente escuro
     DrawRectangle(0, 0, screenWidth, screenHeight, (Color){0, 0, 0, 200});
     
-    // === TÍTULO "PAUSE" NO TOPO ===
     const char* titulo = "PAUSE";
     int tamanhoTitulo = 80;
     int larguraTitulo = MeasureText(titulo, tamanhoTitulo);
     int posYTitulo = screenHeight / 2 - 200;
     
-    // Sombra do título
     DrawText(titulo, (screenWidth / 2 - larguraTitulo / 2) + 4, posYTitulo + 4, tamanhoTitulo, (Color){0, 0, 0, 150});
-    // Título principal
     DrawText(titulo, screenWidth / 2 - larguraTitulo / 2, posYTitulo, tamanhoTitulo, YELLOW);
     
-    // === CAIXA DO MENU ===
     int boxWidth = 400;
     int boxHeight = 300;
     int boxX = screenWidth / 2 - boxWidth / 2;
     int boxY = screenHeight / 2 - 80;
     
-    // Borda externa (efeito de profundidade)
     DrawRectangle(boxX - 4, boxY - 4, boxWidth + 8, boxHeight + 8, (Color){255, 255, 255, 30});
-    // Fundo da caixa
     DrawRectangle(boxX, boxY, boxWidth, boxHeight, (Color){20, 20, 40, 230});
-    // Borda interna
     DrawRectangleLines(boxX, boxY, boxWidth, boxHeight, (Color){255, 215, 0, 180});
     
-    // === OPÇÕES DO MENU ===
     int startY = boxY + 30;
     int spacing = 45;
     int opcaoX = boxX + 30;
     
-    // Opção 1: Novo Jogo
     int yPos = startY;
     DrawRectangle(opcaoX - 5, yPos - 5, 80, 35, (Color){255, 255, 255, 50});
     DrawRectangle(opcaoX, yPos, 70, 25, (Color){255, 255, 255, 100});
     DrawText("[N]", opcaoX + 10, yPos + 3, 20, WHITE);
     DrawText("Novo Jogo", opcaoX + 90, yPos + 3, 20, WHITE);
     
-    // Opção 2: Salvar Jogo
     yPos = startY + spacing;
     DrawRectangle(opcaoX - 5, yPos - 5, 80, 35, (Color){100, 200, 255, 50});
     DrawRectangle(opcaoX, yPos, 70, 25, (Color){100, 200, 255, 100});
     DrawText("[S]", opcaoX + 10, yPos + 3, 20, WHITE);
     DrawText("Salvar Jogo", opcaoX + 90, yPos + 3, 20, (Color){100, 200, 255, 255});
     
-    // Opção 3: Carregar Jogo
     yPos = startY + (spacing * 2);
     DrawRectangle(opcaoX - 5, yPos - 5, 80, 35, (Color){255, 200, 100, 50});
     DrawRectangle(opcaoX, yPos, 70, 25, (Color){255, 200, 100, 100});
     DrawText("[C]", opcaoX + 10, yPos + 3, 20, WHITE);
     DrawText("Carregar Jogo", opcaoX + 90, yPos + 3, 20, (Color){255, 200, 100, 255});
     
-    // Opção 4: Voltar ao Jogo
     yPos = startY + (spacing * 3);
     DrawRectangle(opcaoX - 5, yPos - 5, 80, 35, (Color){0, 255, 0, 50});
     DrawRectangle(opcaoX, yPos, 70, 25, (Color){0, 255, 0, 100});
     DrawText("[ESC]", opcaoX + 3, yPos + 3, 20, WHITE);
     DrawText("Voltar ao Jogo", opcaoX + 90, yPos + 3, 20, GREEN);
     
-    // Opção 5: Sair do Jogo
     yPos = startY + (spacing * 4);
     DrawRectangle(opcaoX - 5, yPos - 5, 80, 35, (Color){255, 0, 0, 50});
     DrawRectangle(opcaoX, yPos, 70, 25, (Color){255, 0, 0, 100});
     DrawText("[Q]", opcaoX + 10, yPos + 3, 20, WHITE);
     DrawText("Sair do Jogo", opcaoX + 90, yPos + 3, 20, RED);
     
-    // === INFORMAÇÕES ADICIONAIS ===
     const char* dica = "Pressione TAB para despausar rapidamente";
     int larguraDica = MeasureText(dica, 14);
     DrawText(dica, screenWidth / 2 - larguraDica / 2, boxY + boxHeight + 20, 14, (Color){200, 200, 200, 200});
     
-    // === INFORMAÇÕES DO JOGO (OPCIONAL) ===
     char infoScore[64];
     sprintf(infoScore, "Pontuacao Atual: %d", game->score);
     DrawText(infoScore, boxX + 20, boxY + boxHeight - 35, 16, YELLOW);
@@ -162,19 +145,17 @@ void DrawPauseOverlay(Game* game, bool* shouldQuit, bool* shouldStartNew) {
 // Função principal de gerenciamento do menu
 void HandlePauseMenu(Game* game, bool* shouldQuit, bool* shouldStartNew) {
     
-    // --- CORREÇÃO: Input do Menu (SEM TAB) ---
-    
-    if (IsKeyPressed(KEY_N)) { // Tecla 'N' (Novo Jogo)
+    if (IsKeyPressed(KEY_N)) { 
         *shouldStartNew = true;
         game->isPaused = false;
     } 
-    else if (IsKeyPressed(KEY_S)) { // Tecla 'S' (Salvar)
+    else if (IsKeyPressed(KEY_S)) { 
         if (SaveGame(game)) {
-            // Opcional: Mostrar mensagem de sucesso
             printf("Jogo salvo com sucesso!\n");
+            game->saveMessageTimer = 2.0f;
         }
     } 
-    else if (IsKeyPressed(KEY_C)) { // Tecla 'C' (Carregar)
+    else if (IsKeyPressed(KEY_C)) { 
         if (LoadGame(game)) {
             game->isPaused = false;
             printf("Jogo carregado com sucesso!\n");
@@ -182,16 +163,16 @@ void HandlePauseMenu(Game* game, bool* shouldQuit, bool* shouldStartNew) {
             printf("Nenhum save encontrado!\n");
         }
     } 
-    else if (IsKeyPressed(KEY_Q)) { // Tecla 'Q' (Sair)
+    else if (IsKeyPressed(KEY_Q)) { 
         *shouldQuit = true;
     } 
-    else if (IsKeyPressed(KEY_ESCAPE)) { // CORREÇÃO: Use ESC ao invés de V
-        game->isPaused = false;
+    // --- ALTERAÇÃO AQUI: REMOVIDO O KEY_TAB PARA NÃO CONFLITAR COM A MAIN ---
+    else if (IsKeyPressed(KEY_V) || IsKeyPressed(KEY_ESCAPE)) { 
+        game->isPaused = false; 
     }
-    // IMPORTANTE: Removido KEY_TAB daqui!
 }
 
-// --- Funções do Ranking ---
+// --- Funções do Ranking (CÓDIGO ORIGINAL MANTIDO) ---
 
 void LoadRanking(int scores[MAX_RANKING_SCORES]) {
     for (int i = 0; i < MAX_RANKING_SCORES; i++) {
