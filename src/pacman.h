@@ -11,7 +11,7 @@
 #include "game.h"
 
 // Constantes de movimentação
-#define PACMAN_SPEED 4.1f  // Velocidade do Pac-Man (blocos por segundo)
+#define PACMAN_SPEED 4.0f  // Velocidade do Pac-Man (blocos por segundo)
 
 // Inicializa o Pac-Man
 void InitPacman(Game* game);

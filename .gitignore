@@ -28,7 +28,7 @@
 *.so.*
 *.dylib
 
-# Executables
+# Executables (Windows, Linux, Mac)
 *.exe
 *.out
 *.app
@@ -54,5 +54,14 @@ dkms.conf
 # debug information files
 *.dwo
 
-
+# VS Code settings (local)
 .vscode/
+
+# --- DADOS DO JOGO (ESSENCIAL PARA NÃO DAR ERRO) ---
+# Ignora saves e ranking locais para não conflitar com quem baixar
+savegame.bin
+ranking.bin
+
+# Arquivos de Sistema Operacional (Lixo)
+.DS_Store
+Thumbs.db

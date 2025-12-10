@@ -29,7 +29,7 @@ bool IsPacmanValidTile(Game* game, int gridX, int gridY) {
 void UpdatePacman(Game* game, float delta) {
     if (game->mapa == NULL) return;
 
-    // === 1. INPUT (Mantendo a lógica melhorada de input buffer) ===
+    // === 1. INPUT ===
     bool inputDetected = false;
     Posicao intencao = game->pacman.proximaDirecao;
 
@@ -46,7 +46,7 @@ void UpdatePacman(Game* game, float delta) {
     }
     game->pacman.proximaDirecao = intencao;
 
-    // === 2. INVERSÃO IMEDIATA (Permite virar 180 graus na hora) ===
+    // === 2. INVERSÃO IMEDIATA ===
     if (game->pacman.direcaoAtual.x != 0 && game->pacman.proximaDirecao.x == -game->pacman.direcaoAtual.x) {
         game->pacman.direcaoAtual = game->pacman.proximaDirecao;
     }
@@ -73,7 +73,6 @@ void UpdatePacman(Game* game, float delta) {
     float tileCenterY = currentGridY * TAMANHO_BLOCO;
     float dist = fabs(game->pacman.pixelPos.x - tileCenterX) + fabs(game->pacman.pixelPos.y - tileCenterY);
 
-    // Tenta virar na esquina
     if (dist < 4.0f) {
         bool canTurn = IsPacmanValidTile(game, currentGridX + game->pacman.proximaDirecao.x, currentGridY + game->pacman.proximaDirecao.y);
         
@@ -96,31 +95,21 @@ void UpdatePacman(Game* game, float delta) {
         }
     }
     
-    // ... (final da UpdatePacman) ...
-    
-    // TRATAMENTO DE PORTAIS  
+    // Tratamento de Portais
     if (game->mapa->matriz[currentGridY][currentGridX] == PORTAL) {
          if (game->mapa->numPortais >= 2) {
-            
-            // Descobre qual portal é este (pelo índice)
             int idx = -1;
             for(int i=0; i<game->mapa->numPortais; i++) {
                 if (game->mapa->portais[i].x == currentGridX && game->mapa->portais[i].y == currentGridY) {
                     idx = i; break;
                 }
             }
-            
             if (idx != -1) {
-                // Teleporta para o próximo
                 int dest = (idx + 1) % game->mapa->numPortais;
-                
-                // Move a posição LÓGICA (grid) e VISUAL (pixel)
                 game->pacman.gridPos.x = game->mapa->portais[dest].x;
                 game->pacman.gridPos.y = game->mapa->portais[dest].y;
-                
                 game->pacman.pixelPos.x = game->pacman.gridPos.x * TAMANHO_BLOCO;
                 game->pacman.pixelPos.y = game->pacman.gridPos.y * TAMANHO_BLOCO;
-                
                 game->pacman.pixelPos.x += game->pacman.direcaoAtual.x * (TAMANHO_BLOCO / 2.0f); 
                 game->pacman.pixelPos.y += game->pacman.direcaoAtual.y * (TAMANHO_BLOCO / 2.0f);
             }
@@ -129,21 +118,32 @@ void UpdatePacman(Game* game, float delta) {
 }
 
 void DrawPacman(Game* game) {
-    int offset = TAMANHO_BLOCO / 2;
-    int raio = (int)(TAMANHO_BLOCO * 0.45f);
+    Vector2 center = { 
+        game->pacman.pixelPos.x + (TAMANHO_BLOCO / 2), 
+        game->pacman.pixelPos.y + (TAMANHO_BLOCO / 2) 
+    };
     
-    DrawCircle((int)game->pacman.pixelPos.x + offset, (int)game->pacman.pixelPos.y + offset, raio, YELLOW);
+    float raio = TAMANHO_BLOCO * 0.45f;
     
-    // Desenho do olho
-    Vector2 centro = { game->pacman.pixelPos.x + offset, game->pacman.pixelPos.y + offset };
-    float olhoX = centro.x;
-    float olhoY = centro.y - (raio / 3.0f);
+    // 1. Calcula o ângulo base baseado na direção
+    float rotation = 0.0f;
+    if (game->pacman.direcaoAtual.x == 1) rotation = 0.0f;
+    else if (game->pacman.direcaoAtual.x == -1) rotation = 180.0f;
+    else if (game->pacman.direcaoAtual.y == -1) rotation = 270.0f;
+    else if (game->pacman.direcaoAtual.y == 1) rotation = 90.0f;
     
-    if (game->pacman.direcaoAtual.x < 0) olhoX = centro.x - (raio / 4.0f);
-    else if (game->pacman.direcaoAtual.x > 0) olhoX = centro.x + (raio / 4.0f);
+    // 2. Animação da boca (VELOCIDADE ATUALIZADA: 20.0f)
+    // Se quiser ainda mais rápido, aumente para 30.0f
+    float mouthOpen = fabs(sinf(GetTime() * 20.0f)) * 45.0f;
     
-    if (game->pacman.direcaoAtual.y < 0) olhoY = centro.y - (raio / 2.0f);
-    else if (game->pacman.direcaoAtual.y > 0) olhoY = centro.y + (raio / 6.0f);
+    // Se estiver parado, mantém a boca aberta (estética clássica)
+    if (game->pacman.direcaoAtual.x == 0 && game->pacman.direcaoAtual.y == 0) {
+        mouthOpen = 45.0f; 
+    }
+
+    // 3. Desenha o setor do círculo (Pac-Man)
+    float startAngle = rotation + mouthOpen;
+    float endAngle = rotation + 360.0f - mouthOpen;
     
-    DrawCircle((int)olhoX, (int)olhoY, 2, BLACK);
+    DrawCircleSector(center, raio, startAngle, endAngle, 30, YELLOW);
 }

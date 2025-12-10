@@ -6,39 +6,60 @@
 #include "pacman.h"
 #include <stdlib.h>
 #include <stdio.h>
-
+// ryan
 int main(void) {
     // Calcula o tamanho da tela baseado nas constantes do game.h
     const int screenWidth = COLUNAS * TAMANHO_BLOCO; 
     const int screenHeight = (LINHAS * TAMANHO_BLOCO) + 40; 
 
     InitWindow(screenWidth, screenHeight, "Pac-Man UFRJ - 2025.2");
+    
+    // 1. INICIALIZA O SISTEMA DE ÁUDIO
+    InitAudioDevice();
+
     SetTargetFPS(60);
 
     // Inicializa estruturas do jogo
     Game game = {0};
     GameState state = {0};
     
-    // Inicializa mensagem de ranking vazia para evitar lixo de memória
     game.rankingMessage[0] = '\0';
+    game.isMuted = false; // Começa com som
+
+    // 2. CARREGA OS SONS
+    game.sfxIntro     = LoadSound("pacman_beginning.wav");
+    game.sfxWaka      = LoadSound("pacman_chomp.wav");
+    game.sfxEatGhost  = LoadSound("pacman_eatghost.wav");
+    game.sfxDeath     = LoadSound("pacman_death.wav");
     
-    // Inicia o estado do jogo (Carrega mapa, zera scores, etc.)
     InitGameState(&game, &state);
+
+    PlaySound(game.sfxIntro);
     
-    // Flags para controle do menu de pausa
     bool shouldQuit = false;
     bool shouldStartNew = false;
     bool tabWasPressed = false;
 
     // ===== LOOP PRINCIPAL DO JOGO =====
     while (!WindowShouldClose() && !shouldQuit) {
-        float delta = GetFrameTime();
-
-        // ==========================================
-        // 1. INPUTS GLOBAIS
-        // ==========================================
         
-        // Tecla TAB para pausar (apenas durante o jogo)
+        // --- INPUTS GLOBAIS ---
+
+        // Tecla F11: Tela Cheia
+        if (IsKeyPressed(KEY_F11)) {
+            ToggleFullscreen();
+        }
+
+        // --- NOVA FUNCIONALIDADE: TECLA M (MUTE) ---
+        if (IsKeyPressed(KEY_M)) {
+            game.isMuted = !game.isMuted;
+            // Se estiver mutado volume = 0, senão volume = 1
+            SetMasterVolume(game.isMuted ? 0.0f : 1.0f);
+        }
+
+        float delta = GetFrameTime();
+        
+        // Tecla TAB para pausar
         if (state.currentScreen == SCREEN_PLAYING) {
             bool tabIsPressed = IsKeyDown(KEY_TAB);
             if (tabIsPressed && !tabWasPressed) {
@@ -48,13 +69,12 @@ int main(void) {
         }
 
         // ==========================================
-        // 2. ATUALIZAÇÃO (UPDATE)
+        // ATUALIZAÇÃO (UPDATE)
         // ==========================================
         if (game.saveMessageTimer > 0) {
             game.saveMessageTimer -= delta;
         }
         if (game.isPaused) {
-            // Se estiver pausado, apenas gerencia o menu de pausa
             HandlePauseMenu(&game, &shouldQuit, &shouldStartNew);
             
             if (shouldStartNew) {
@@ -64,33 +84,23 @@ int main(void) {
             }
         } 
         else {
-            // Lógica enquanto o jogo roda (não pausado)
             if (state.currentScreen == SCREEN_PLAYING && game.mapa != NULL) {
-                
-                // Movemos as entidades
                 UpdatePacman(&game, delta);
                 UpdateGhosts(&game, delta);
                 
-
-                // CHEAT: Pular de Nível (Tecla L)
                 if (IsKeyPressed(KEY_L)) {
-                    // Força a vitória esvaziando os pellets
                     if (game.mapa != NULL) game.mapa->numPellets = 0;
                 }
-                
             }
-
-            // 3º: Verificamos as regras (Colisões, Vitória, Derrota)
-            // É importante chamar isso DEPOIS do movimento para a colisão ser exata
             UpdateGameState(&game, &state, delta);
         }
 
         // ==========================================
-        // 3. RENDERIZAÇÃO (DRAW)
+        // RENDERIZAÇÃO (DRAW)
         // ==========================================
         
         BeginDrawing();
-        ClearBackground(BLACK); // Limpa a tela
+        ClearBackground(BLACK); 
         
         switch (state.currentScreen) {
             case SCREEN_MENU:
@@ -101,20 +111,17 @@ int main(void) {
                 if (game.mapa != NULL) {
                     printarMapa(game.mapa);
                     if (!state.isInvulnerable || (int)(GetTime() * 10) % 2 == 0) {
-                        DrawPacman(&game);// Pacman desenhado antes dos fantasmas ou depois? Depois = em cima.
+                        DrawPacman(&game);
                     }
                     DrawGhosts(&game);
                     DrawHUD(&game, &state);
                 }
-                
-                // Overlay de Pausa
                 if (game.isPaused) {
                     DrawPauseOverlay(&game, &shouldQuit, &shouldStartNew);
                 }
                 break;
                 
             case SCREEN_GAME_OVER:
-                // Desenha o jogo congelado no fundo
                 if (game.mapa != NULL) {
                     printarMapa(game.mapa);
                     DrawGhosts(&game);
@@ -135,14 +142,25 @@ int main(void) {
             default:
                 break;
         }
+
+        // --- ÍCONE DE MUTE (Visual Opcional) ---
+        // Desenha um aviso pequeno no canto se estiver mudo
+        if (game.isMuted) {
+            DrawText("MUDO", screenWidth - 60, 10, 20, RED);
+        }
         
         EndDrawing();
     }
 
     // ==========================================
-    // 4. LIMPEZA DE MEMÓRIA
+    // LIMPEZA
     // ==========================================
-    
+    UnloadSound(game.sfxIntro);
+    UnloadSound(game.sfxWaka);
+    UnloadSound(game.sfxEatGhost);
+    UnloadSound(game.sfxDeath);
+    CloseAudioDevice(); 
+
     UnloadGhosts(&game);
     if (game.mapa != NULL) {
         descartarMapa(game.mapa);

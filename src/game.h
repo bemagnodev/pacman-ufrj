@@ -3,12 +3,14 @@
 
 #include "raylib.h"
 #include <stdlib.h> 
-#include <stdbool.h>
+// O compilador já reconhece bool, true e false nativamente (C23) ou via raylib.h
+// Portanto, não precisamos definir manualmente.
 
 // --- Constantes Globais ---
 #define LINHAS 20
 #define COLUNAS 40
-#define TAMANHO_BLOCO 20
+// Tamanho 40 para alta resolução (1600x840)
+#define TAMANHO_BLOCO 40 
 
 // --- Enums ---
 typedef enum {
@@ -32,7 +34,7 @@ typedef struct {
     int y;
 } Direcao;
 
-// --- Struct Mapa (Membro 1) ---
+// --- Struct Mapa ---
 typedef struct {
     Blocos** matriz;
     Posicao pacman_inicio;
@@ -45,9 +47,11 @@ typedef struct {
     int colunas;
 } Mapa;
 
-// --- Struct Fantasma (Membro 3 - Você) ---
+// --- Struct Fantasma ---
 typedef struct {
-    Vector2 position; // Posição em pixels
+    Vector2 position; // Posição visual (pixels)
+    Posicao gridPos;  // Posição lógica obrigatória (linha/coluna)
+    
     Direcao direction;
     Color color;
     Color originalColor;
@@ -80,13 +84,23 @@ typedef struct {
     bool isPaused;
     bool gameOver;
     
-    int score;             // Pontuação global
-    int lives;             // Vidas globais
+    int score;             
+    int lives;             
     char rankingMessage[128]; 
     float saveMessageTimer;
+
+    // Controle de Mute
+    bool isMuted;
+
+    // --- SONS ---
+    Sound sfxIntro;     
+    Sound sfxWaka;      
+    Sound sfxEatGhost;  
+    Sound sfxDeath;     
+
 } Game;
 
-// --- Protótipos Globais (Membro 1) ---
+// --- Protótipos Globais ---
 Mapa* lerMapa(const char *arquivo);
 void printarMapa(Mapa* mapa);
 void descartarMapa(Mapa* mapa);

@@ -1,7 +1,7 @@
 #include "gamestate.h"
 #include "ghost.h"
 #include "persistence.h"
-#include "pacman.h"  // ← IMPORTANTE: Adicionar este include!
+#include "pacman.h"
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
@@ -21,25 +21,26 @@ void InitGameState(Game* game, GameState* state) {
     game->currentLevel = 1;
     game->gameOver = false;
     game->isPaused = false;
+    // game->isMuted é inicializado na main.c
 }
 
 void StartNewGame(Game* game, GameState* state) {
+    StopSound(game->sfxIntro);
+    
     if (game->mapa != NULL) descartarMapa(game->mapa);
     UnloadGhosts(game);
     
-    // Reseta status
     game->score = 0;
     game->lives = INITIAL_LIVES;
-    game->currentLevel = 1; // Começa no nível 1
+    game->currentLevel = 1; 
     game->gameOver = false;
     game->isPaused = false;
     
     state->invulnerabilityTimer = 0.0f;
     state->isInvulnerable = false;
     
-    // Carrega mapa1.txt
     char filename[30];
-    sprintf(filename, "mapa%d.txt", game->currentLevel);
+    sprintf(filename, "../mapa%d.txt", game->currentLevel);
     game->mapa = lerMapa(filename);  
     
     if (game->mapa != NULL) {
@@ -57,9 +58,8 @@ void LoadNextLevel(Game* game, GameState* state) {
     if (game->mapa != NULL) descartarMapa(game->mapa);
     UnloadGhosts(game);
     
-    // Carrega mapaX.txt
     char filename[30];
-    sprintf(filename, "mapa%d.txt", game->currentLevel);
+    sprintf(filename, "../mapa%d.txt", game->currentLevel);
     game->mapa = lerMapa(filename);  
     
     if (game->mapa != NULL) {
@@ -75,13 +75,7 @@ void LoadNextLevel(Game* game, GameState* state) {
 
 void ResetPacmanPosition(Game* game) {
     if (game->mapa == NULL) return;
-    
-    // Reinicia o Pac-Man  
     InitPacman(game);
-    
-    // Reinicia os fantasmas nas posições iniciais
-    
-    
 }
 
 // === DETECÇÃO DE COLISÕES ===
@@ -99,19 +93,16 @@ void CheckPacmanGhostCollision(Game* game, GameState* state) {
         float ghostX = game->ghosts[i].position.x + (TAMANHO_BLOCO / 2);
         float ghostY = game->ghosts[i].position.y + (TAMANHO_BLOCO / 2);
         
-        // Calcula distância
         float dx = pacmanX - ghostX;
         float dy = pacmanY - ghostY;
         float distance = sqrtf(dx * dx + dy * dy);
         
-        // Se colidiu
         if (distance < GHOST_COLLISION_DISTANCE) {
             if (game->ghosts[i].isVulnerable) {
-                // Pac-Man come o fantasma
                 game->ghosts[i].isActive = false;
                 game->score += POINTS_PER_GHOST;
+                PlaySound(game->sfxEatGhost);
             } else {
-                // Fantasma mata o Pac-Man
                 HandlePacmanDeath(game, state);
                 return;
             }
@@ -125,23 +116,22 @@ void CheckPelletCollection(Game* game, GameState* state) {
     int gridX = (int)((game->pacman.pixelPos.x + TAMANHO_BLOCO / 2) / TAMANHO_BLOCO);
     int gridY = (int)((game->pacman.pixelPos.y + TAMANHO_BLOCO / 2) / TAMANHO_BLOCO);
     
-    // Verifica limites
     if (gridX < 0 || gridX >= game->mapa->colunas) return;
     if (gridY < 0 || gridY >= game->mapa->linhas) return;
     
     Blocos tileAtual = game->mapa->matriz[gridY][gridX];
     
-    // Coletou pellet normal
     if (tileAtual == PELLET) {
         game->mapa->matriz[gridY][gridX] = VAZIO;
         game->score += POINTS_PER_PELLET;
         game->mapa->numPellets--;
+        if (!IsSoundPlaying(game->sfxWaka)) PlaySound(game->sfxWaka);
     }
-    // Coletou power pellet
     else if (tileAtual == POWER_PELLET) {
         game->mapa->matriz[gridY][gridX] = VAZIO;
         game->score += POINTS_PER_POWER_PELLET;
         ScareGhosts(game);
+        if (!IsSoundPlaying(game->sfxWaka)) PlaySound(game->sfxWaka);
     }
 }
 
@@ -149,23 +139,17 @@ void CheckPelletCollection(Game* game, GameState* state) {
 
 void HandlePacmanDeath(Game* game, GameState* state) {
     game->lives--;
+    PlaySound(game->sfxDeath);
     
-    // Penalidade de pontos
     game->score -= PENALTY_DEATH;
     if (game->score < 0) game->score = 0;
     
     if (game->lives <= 0) {
-        // Game Over
         game->gameOver = true;
         state->currentScreen = SCREEN_GAME_OVER;
-        
-        // Atualiza o ranking
         UpdateAndSaveRanking(game);
     } else {
-        // Ainda tem vidas, reseta posição
         ResetPacmanPosition(game);
-        
-        // Ativa invulnerabilidade temporária
         state->isInvulnerable = true;
         state->invulnerabilityTimer = INVULNERABILITY_TIME;
         state->deathAnimationTimer = 0.5f;
@@ -174,14 +158,11 @@ void HandlePacmanDeath(Game* game, GameState* state) {
 
 bool CheckVictoryCondition(Game* game, GameState* state) {
     if (game->mapa == NULL) return false;
-    
-    // Vitória: todos os pellets coletados
     if (game->mapa->numPellets <= 0) {
         state->currentScreen = SCREEN_VICTORY;
         state->transitionTimer = 3.0f;
         return true;
     }
-    
     return false;
 }
 
@@ -190,64 +171,40 @@ bool CheckDefeatCondition(Game* game, GameState* state) {
 }
 
 void UpdateGameState(Game* game, GameState* state, float delta) {
-    // Atualiza timer de invulnerabilidade
     if (state->isInvulnerable) {
         state->invulnerabilityTimer -= delta;
-        if (state->invulnerabilityTimer <= 0.0f) {
-            state->isInvulnerable = false;
-        }
+        if (state->invulnerabilityTimer <= 0.0f) state->isInvulnerable = false;
     }
-    
-    // Atualiza timer de animação de morte
-    if (state->deathAnimationTimer > 0.0f) {
-        state->deathAnimationTimer -= delta;
-    }
-    
-    // Atualiza timer de transição
+    if (state->deathAnimationTimer > 0.0f) state->deathAnimationTimer -= delta;
     if (state->transitionTimer > 0.0f) {
         state->transitionTimer -= delta;
-        
-        if (state->transitionTimer <= 0.0f) {
-            // Acabou a transição, carrega próximo nível
-            if (state->currentScreen == SCREEN_VICTORY) {
-                LoadNextLevel(game, state);
-            }
+        if (state->transitionTimer <= 0.0f && state->currentScreen == SCREEN_VICTORY) {
+            LoadNextLevel(game, state);
         }
     }
     
-    // Lógica específica de cada tela
     switch (state->currentScreen) {
         case SCREEN_PLAYING:
-            // Verifica colisões
             CheckPacmanGhostCollision(game, state);
             CheckPelletCollection(game, state);
-            
-            // Verifica condições de vitória/derrota
-            if (!CheckVictoryCondition(game, state)) {
-                CheckDefeatCondition(game, state);
-            }
+            if (!CheckVictoryCondition(game, state)) CheckDefeatCondition(game, state);
             break;
             
         case SCREEN_MENU:
-            // Input da tela inicial
+            if (!IsSoundPlaying(game->sfxIntro)) {
+                PlaySound(game->sfxIntro);
+            }
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
                 StartNewGame(game, state);
             }
             break;
             
         case SCREEN_GAME_OVER:
-            // Input do Game Over
-            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
-                state->currentScreen = SCREEN_MENU;
-            }
+            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) state->currentScreen = SCREEN_MENU;
             break;
-            
         case SCREEN_VICTORY:
-            // Aguarda o timer de transição
             break;
-            
-        default:
-            break;
+        default: break;
     }
 }
 
@@ -257,46 +214,112 @@ void DrawMenuScreen(void) {
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
     
-    ClearBackground(BLACK);
+    ClearBackground((Color){10, 10, 20, 255}); 
     
     const char* titulo = "PAC-MAN";
-    int larguraTitulo = MeasureText(titulo, 60);
-    DrawText(titulo, screenWidth / 2 - larguraTitulo / 2, screenHeight / 2 - 100, 60, YELLOW);
+    int tamanhoTitulo = 140; 
+    int larguraTitulo = MeasureText(titulo, tamanhoTitulo);
+    int tituloX = screenWidth / 2 - larguraTitulo / 2;
+    int tituloY = 60;
     
-    const char* instrucao = "Pressione ENTER para Iniciar";
-    int larguraInstrucao = MeasureText(instrucao, 20);
-    DrawText(instrucao, screenWidth / 2 - larguraInstrucao / 2, screenHeight / 2, 20, WHITE);
+    DrawText(titulo, tituloX + 8, tituloY + 8, tamanhoTitulo, DARKGRAY);
+    DrawText(titulo, tituloX, tituloY, tamanhoTitulo, YELLOW);
     
-    DrawText("Controles:", screenWidth / 2 - 100, screenHeight / 2 + 60, 20, LIGHTGRAY);
-    DrawText("Setas: Mover", screenWidth / 2 - 100, screenHeight / 2 + 90, 18, GRAY);
-    DrawText("TAB: Menu de Pausa", screenWidth / 2 - 100, screenHeight / 2 + 115, 18, GRAY);
+    int infoY = 220;
+    int spacing = 40;
     
-    DrawText("Trabalho em Grupo - Programacao 2", 10, screenHeight - 25, 15, DARKGRAY);
+    const char* disciplina = "Disciplina: Programacao 2 - 2025/2";
+    int larguraDisc = MeasureText(disciplina, 30);
+    DrawText(disciplina, screenWidth / 2 - larguraDisc / 2, infoY, 30, SKYBLUE);
+    
+    const char* prof = "Professor: Marcos Tomazzoli Leipnitz";
+    int larguraProf = MeasureText(prof, 30);
+    DrawText(prof, screenWidth / 2 - larguraProf / 2, infoY + spacing, 30, WHITE);
+    
+    float floatOffset = sinf(GetTime() * 3.0f) * 10.0f; 
+    int decorY = screenHeight / 2 + 50 + (int)floatOffset;
+    int decorCenterX = screenWidth / 2;
+    
+    DrawCircle(decorCenterX + 80, decorY, 40, RED);
+    DrawRectangle(decorCenterX + 40, decorY, 80, 40, RED);
+    DrawCircle(decorCenterX + 60, decorY - 10, 10, WHITE);
+    DrawCircle(decorCenterX + 100, decorY - 10, 10, WHITE);
+    DrawCircle(decorCenterX + 58, decorY - 10, 4, BLUE);
+    DrawCircle(decorCenterX + 98, decorY - 10, 4, BLUE);
+    
+    DrawCircleSector((Vector2){decorCenterX - 80, decorY + 10}, 45, 30, 330, 20, YELLOW);
+    
+    const char* controles = "Setas: Mover  |  TAB: Pausa  |  F11: Tela Cheia  |  M: Mutar";
+    DrawText(controles, screenWidth/2 - MeasureText(controles, 24)/2, screenHeight - 140, 24, GRAY);
+    
+    const char* instrucao = "Pressione [ENTER] para Iniciar";
+    int tamanhoInstrucao = 40;
+    int larguraInstrucao = MeasureText(instrucao, tamanhoInstrucao);
+    
+    if ((int)(GetTime() * 2) % 2 == 0) { 
+        DrawText(instrucao, screenWidth / 2 - larguraInstrucao / 2, screenHeight - 80, tamanhoInstrucao, ORANGE);
+    }
 }
 
+// === TELA DE GAME OVER COM RANKING (CORRIGIDA) ===
 void DrawGameOverScreen(Game* game) {
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
     
-    DrawRectangle(0, 0, screenWidth, screenHeight, (Color){0, 0, 0, 200});
+    // 1. Fundo Avermelhado
+    DrawRectangle(0, 0, screenWidth, screenHeight, (Color){30, 0, 0, 230});
     
+    // 2. Título
     const char* titulo = "GAME OVER";
-    int larguraTitulo = MeasureText(titulo, 50);
-    DrawText(titulo, screenWidth / 2 - larguraTitulo / 2, screenHeight / 2 - 100, 50, RED);
+    int tamanhoTitulo = 100;
+    int larguraTitulo = MeasureText(titulo, tamanhoTitulo);
+    DrawText(titulo, screenWidth / 2 - larguraTitulo / 2, 50, tamanhoTitulo, RED);
     
+    // 3. Score Final
     char scoreText[64];
-    sprintf(scoreText, "Pontuacao Final: %d", game->score);
-    int larguraScore = MeasureText(scoreText, 30);
-    DrawText(scoreText, screenWidth / 2 - larguraScore / 2, screenHeight / 2 - 20, 30, WHITE);
+    sprintf(scoreText, "SEU SCORE: %06d", game->score);
+    int tamanhoScore = 50;
+    int larguraScore = MeasureText(scoreText, tamanhoScore);
+    DrawText(scoreText, screenWidth / 2 - larguraScore / 2, 160, tamanhoScore, WHITE);
     
+    // 4. Mensagem de Posição
     if (strlen(game->rankingMessage) > 0) {
-        int larguraRanking = MeasureText(game->rankingMessage, 20);
-        DrawText(game->rankingMessage, screenWidth / 2 - larguraRanking / 2, screenHeight / 2 + 30, 20, YELLOW);
+        int l = MeasureText(game->rankingMessage, 30);
+        DrawText(game->rankingMessage, screenWidth / 2 - l / 2, 220, 30, YELLOW);
+    }
+
+    // --- 5. TABELA DE RANKING (AQUI ESTÁ O QUE FALTAVA) ---
+    int scores[MAX_RANKING_SCORES];
+    LoadRanking(scores); // Carrega os dados do arquivo
+
+    int startY = 280;
+    int rankFontSize = 30;
+    const char* header = "- TOP 5 MELHORES -";
+    DrawText(header, screenWidth/2 - MeasureText(header, rankFontSize)/2, startY, rankFontSize, ORANGE);
+    
+    for (int i = 0; i < MAX_RANKING_SCORES; i++) {
+        char line[64];
+        // Formata: "1. 005000"
+        sprintf(line, "%d. %06d", i + 1, scores[i]);
+        
+        int w = MeasureText(line, rankFontSize);
+        int posY = startY + 40 + (i * 35);
+        
+        // Destaca em Verde se esse for o score atual do jogador
+        Color corTexto = LIGHTGRAY;
+        if (scores[i] == game->score && game->score > 0) {
+            corTexto = GREEN; 
+        }
+        
+        DrawText(line, screenWidth / 2 - w / 2, posY, rankFontSize, corTexto);
     }
     
-    const char* instrucao = "Pressione ENTER para voltar ao Menu";
-    int larguraInstrucao = MeasureText(instrucao, 18);
-    DrawText(instrucao, screenWidth / 2 - larguraInstrucao / 2, screenHeight / 2 + 80, 18, LIGHTGRAY);
+    // 6. Rodapé
+    const char* instrucao = "Pressione [ENTER] para Menu";
+    if ((int)(GetTime() * 2) % 2 == 0) {
+        int l = MeasureText(instrucao, 30);
+        DrawText(instrucao, screenWidth / 2 - l / 2, screenHeight - 60, 30, GRAY);
+    }
 }
 
 void DrawVictoryScreen(Game* game) {
@@ -306,22 +329,26 @@ void DrawVictoryScreen(Game* game) {
     DrawRectangle(0, 0, screenWidth, screenHeight, (Color){0, 0, 0, 200});
     
     const char* titulo = "NIVEL COMPLETO!";
-    int larguraTitulo = MeasureText(titulo, 45);
-    DrawText(titulo, screenWidth / 2 - larguraTitulo / 2, screenHeight / 2 - 80, 45, GREEN);
+    int tamanhoTitulo = 90;
+    int larguraTitulo = MeasureText(titulo, tamanhoTitulo);
+    DrawText(titulo, screenWidth / 2 - larguraTitulo / 2, screenHeight / 2 - 120, tamanhoTitulo, GREEN);
     
     char scoreText[64];
-    sprintf(scoreText, "Pontuacao: %d", game->score);
-    int larguraScore = MeasureText(scoreText, 25);
-    DrawText(scoreText, screenWidth / 2 - larguraScore / 2, screenHeight / 2 - 10, 25, WHITE);
+    sprintf(scoreText, "Pontuacao: %06d", game->score);
+    int tamanhoScore = 50;
+    int larguraScore = MeasureText(scoreText, tamanhoScore);
+    DrawText(scoreText, screenWidth / 2 - larguraScore / 2, screenHeight / 2 - 10, tamanhoScore, WHITE);
     
     char levelText[64];
     sprintf(levelText, "Proximo Nivel: %d", game->currentLevel + 1);
-    int larguraLevel = MeasureText(levelText, 20);
-    DrawText(levelText, screenWidth / 2 - larguraLevel / 2, screenHeight / 2 + 30, 20, YELLOW);
+    int tamanhoLevel = 40;
+    int larguraLevel = MeasureText(levelText, tamanhoLevel);
+    DrawText(levelText, screenWidth / 2 - larguraLevel / 2, screenHeight / 2 + 50, tamanhoLevel, YELLOW);
     
     const char* aguarde = "Aguarde...";
-    int larguraAguarde = MeasureText(aguarde, 18);
-    DrawText(aguarde, screenWidth / 2 - larguraAguarde / 2, screenHeight / 2 + 70, 18, LIGHTGRAY);
+    int tamanhoAguarde = 36;
+    int larguraAguarde = MeasureText(aguarde, tamanhoAguarde);
+    DrawText(aguarde, screenWidth / 2 - larguraAguarde / 2, screenHeight / 2 + 100, tamanhoAguarde, LIGHTGRAY);
 }
 
 void DrawLevelTransition(Game* game, GameState* state) {
@@ -332,37 +359,39 @@ void DrawLevelTransition(Game* game, GameState* state) {
     
     char levelText[64];
     sprintf(levelText, "NIVEL %d", game->currentLevel);
-    int largura = MeasureText(levelText, 50);
-    DrawText(levelText, screenWidth / 2 - largura / 2, screenHeight / 2 - 25, 50, YELLOW);
+    int tamanho = 100;
+    int largura = MeasureText(levelText, tamanho);
+    DrawText(levelText, screenWidth / 2 - largura / 2, screenHeight / 2 - 50, tamanho, YELLOW);
 }
 
 void DrawHUD(Game* game, GameState* state) {
     int screenWidth = GetScreenWidth();
-    int hudY = LINHAS * TAMANHO_BLOCO + 5;
+    int hudY = LINHAS * TAMANHO_BLOCO + 5; 
+    
+    int fontSize = 40;
     
     char scoreText[32];
-    sprintf(scoreText, "Score: %d", game->score);
-    DrawText(scoreText, 10, hudY, 20, WHITE);
+    sprintf(scoreText, "Score: %06d", game->score);
+    DrawText(scoreText, 20, hudY, fontSize, WHITE);
     
     char livesText[32];
     sprintf(livesText, "Vidas: %d", game->lives);
-    DrawText(livesText, 200, hudY, 20, RED);
+    DrawText(livesText, 400, hudY, fontSize, RED);
     
     char levelText[32];
     sprintf(levelText, "Nivel: %d", game->currentLevel);
-    DrawText(levelText, 380, hudY, 20, YELLOW);
+    DrawText(levelText, 800, hudY, fontSize, YELLOW);
     
     if (game->mapa != NULL) {
         char pelletsText[32];
         sprintf(pelletsText, "Pellets: %d", game->mapa->numPellets);
-        DrawText(pelletsText, 560, hudY, 20, LIGHTGRAY);
+        DrawText(pelletsText, 1100, hudY, fontSize, LIGHTGRAY);
     }
     
-    // --- ÁREA DE MENSAGENS ---
     if (game->saveMessageTimer > 0) {
-        DrawText("JOGO SALVO!", 300, 10, 20, GREEN); 
+        DrawText("JOGO SALVO!", screenWidth/2 - 120, 20, fontSize, GREEN); 
     }
     else if (state->isInvulnerable) {
-        DrawText("INVULNERAVEL!", screenWidth/2 - 70, 10, 20, SKYBLUE);
+        DrawText("INVULNERAVEL!", screenWidth/2 - 150, 20, fontSize, SKYBLUE);
     }
 }

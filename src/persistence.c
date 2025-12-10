@@ -3,182 +3,178 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Salva o jogo em binário
 static bool SaveGame(Game* game) {
+    if (game->mapa == NULL) return false;
+
     FILE* file = fopen(SAVEGAME_FILENAME, "wb");
     if (file == NULL) {
+        printf("Erro ao abrir arquivo para salvar.\n");
         return false;
     }
 
+    // 1. Dados Básicos
     fwrite(&game->score, sizeof(int), 1, file);
     fwrite(&game->lives, sizeof(int), 1, file);
     fwrite(&game->currentLevel, sizeof(int), 1, file);
     
-    if (game->mapa != NULL) {
-        fwrite(&game->mapa->numPellets, sizeof(int), 1, file);
-    } else {
-        int zero = 0;
-        fwrite(&zero, sizeof(int), 1, file);
-    }
-
+    // 2. Pacman
     fwrite(&game->pacman, sizeof(Pacman), 1, file);
+
+    // 3. Fantasmas
     fwrite(&game->ghostCount, sizeof(int), 1, file);
     fwrite(game->ghosts, sizeof(Ghost), game->ghostCount, file);
 
-    if (game->mapa != NULL) {
-        for (int i = 0; i < game->mapa->linhas; i++) {
-            fwrite(game->mapa->matriz[i], sizeof(Blocos), game->mapa->colunas, file);
-        }
+    // 4. Mapa (Dados dinâmicos)
+    fwrite(&game->mapa->numPellets, sizeof(int), 1, file);
+    
+    for (int i = 0; i < game->mapa->linhas; i++) {
+        fwrite(game->mapa->matriz[i], sizeof(Blocos), game->mapa->colunas, file);
     }
 
     fclose(file);
     return true;
 }
 
-// Lógica interna para carregar o jogo (CÓDIGO ORIGINAL MANTIDO)
+// Lógica de Carregamento Segura
 static bool LoadGame(Game* game) {
     FILE* file = fopen(SAVEGAME_FILENAME, "rb");
-    if (file == NULL) {
+    if (file == NULL) return false; 
+
+    int savedScore, savedLives, savedLevel;
+
+    fread(&savedScore, sizeof(int), 1, file);
+    fread(&savedLives, sizeof(int), 1, file);
+    fread(&savedLevel, sizeof(int), 1, file);
+
+    // Limpa estado anterior
+    if (game->mapa != NULL) descartarMapa(game->mapa);
+    if (game->ghosts != NULL) { free(game->ghosts); game->ghosts = NULL; }
+
+    // Aloca mapa base
+    char filename[30];
+    sprintf(filename, "../mapa%d.txt", savedLevel);
+    game->mapa = lerMapa(filename);
+
+    if (game->mapa == NULL) {
+        fclose(file);
         return false;
     }
 
-    fread(&game->score, sizeof(int), 1, file);
-    fread(&game->lives, sizeof(int), 1, file);
-    fread(&game->currentLevel, sizeof(int), 1, file);
-    
-    int savedPellets;
-    fread(&savedPellets, sizeof(int), 1, file);
+    game->score = savedScore;
+    game->lives = savedLives;
+    game->currentLevel = savedLevel;
 
     fread(&game->pacman, sizeof(Pacman), 1, file);
 
-    int newGhostCount = 0;
-    fread(&newGhostCount, sizeof(int), 1, file);
-
-    if (newGhostCount != game->ghostCount) {
-        free(game->ghosts);
-        game->ghosts = (Ghost*)malloc(sizeof(Ghost) * newGhostCount);
-        game->ghostCount = newGhostCount;
-    }
+    int savedGhostCount;
+    fread(&savedGhostCount, sizeof(int), 1, file);
+    
+    game->ghostCount = savedGhostCount;
+    game->ghosts = (Ghost*)malloc(sizeof(Ghost) * game->ghostCount);
     fread(game->ghosts, sizeof(Ghost), game->ghostCount, file);
 
-    if (game->mapa != NULL) {
-        for (int i = 0; i < game->mapa->linhas; i++) {
-            fread(game->mapa->matriz[i], sizeof(Blocos), game->mapa->colunas, file);
-        }
-        game->mapa->numPellets = savedPellets;
+    int savedPellets;
+    fread(&savedPellets, sizeof(int), 1, file);
+    game->mapa->numPellets = savedPellets;
+
+    for (int i = 0; i < game->mapa->linhas; i++) {
+        fread(game->mapa->matriz[i], sizeof(Blocos), game->mapa->colunas, file);
     }
 
     fclose(file);
     return true;
 }
 
-// Função separada apenas para DESENHAR (CÓDIGO ORIGINAL MANTIDO)
+// === MENU VISUAL E COLORIDO ===
 void DrawPauseOverlay(Game* game, bool* shouldQuit, bool* shouldStartNew) {
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
     
+    // 1. Fundo Escurecido
     DrawRectangle(0, 0, screenWidth, screenHeight, (Color){0, 0, 0, 200});
     
-    const char* titulo = "PAUSE";
-    int tamanhoTitulo = 80;
-    int larguraTitulo = MeasureText(titulo, tamanhoTitulo);
-    int posYTitulo = screenHeight / 2 - 200;
-    
-    DrawText(titulo, (screenWidth / 2 - larguraTitulo / 2) + 4, posYTitulo + 4, tamanhoTitulo, (Color){0, 0, 0, 150});
-    DrawText(titulo, screenWidth / 2 - larguraTitulo / 2, posYTitulo, tamanhoTitulo, YELLOW);
-    
-    int boxWidth = 400;
-    int boxHeight = 300;
+    // 2. Caixa do Menu
+    int boxWidth = 600;
+    int boxHeight = 500;
     int boxX = screenWidth / 2 - boxWidth / 2;
-    int boxY = screenHeight / 2 - 80;
+    int boxY = screenHeight / 2 - boxHeight / 2;
     
-    DrawRectangle(boxX - 4, boxY - 4, boxWidth + 8, boxHeight + 8, (Color){255, 255, 255, 30});
-    DrawRectangle(boxX, boxY, boxWidth, boxHeight, (Color){20, 20, 40, 230});
-    DrawRectangleLines(boxX, boxY, boxWidth, boxHeight, (Color){255, 215, 0, 180});
+    DrawRectangle(boxX, boxY, boxWidth, boxHeight, (Color){10, 10, 30, 240});
+    DrawRectangleLines(boxX, boxY, boxWidth, boxHeight, YELLOW);
+    DrawRectangleLines(boxX - 2, boxY - 2, boxWidth + 4, boxHeight + 4, ORANGE); 
+
+    // 3. Título
+    const char* titulo = "PAUSA - OPCOES";
+    int tamanhoTitulo = 50;
+    int larguraTitulo = MeasureText(titulo, tamanhoTitulo);
+    DrawText(titulo, screenWidth / 2 - larguraTitulo / 2 + 4, boxY + 44, tamanhoTitulo, BLACK);
+    DrawText(titulo, screenWidth / 2 - larguraTitulo / 2, boxY + 40, tamanhoTitulo, YELLOW);
     
-    int startY = boxY + 30;
-    int spacing = 45;
-    int opcaoX = boxX + 30;
+    // 4. Opções Coloridas
+    int fontSize = 30;
+    int spacing = 60;
+    int startOptionsY = boxY + 130;
+    int textX = boxX + 150; 
+    int keyX = boxX + 80;   
     
-    int yPos = startY;
-    DrawRectangle(opcaoX - 5, yPos - 5, 80, 35, (Color){255, 255, 255, 50});
-    DrawRectangle(opcaoX, yPos, 70, 25, (Color){255, 255, 255, 100});
-    DrawText("[N]", opcaoX + 10, yPos + 3, 20, WHITE);
-    DrawText("Novo Jogo", opcaoX + 90, yPos + 3, 20, WHITE);
+    // [N] Novo Jogo
+    DrawText("[N]", keyX, startOptionsY, fontSize, SKYBLUE);
+    DrawText("Novo Jogo", textX, startOptionsY, fontSize, SKYBLUE);
     
-    yPos = startY + spacing;
-    DrawRectangle(opcaoX - 5, yPos - 5, 80, 35, (Color){100, 200, 255, 50});
-    DrawRectangle(opcaoX, yPos, 70, 25, (Color){100, 200, 255, 100});
-    DrawText("[S]", opcaoX + 10, yPos + 3, 20, WHITE);
-    DrawText("Salvar Jogo", opcaoX + 90, yPos + 3, 20, (Color){100, 200, 255, 255});
+    // [C] Carregar
+    DrawText("[C]", keyX, startOptionsY + spacing, fontSize, ORANGE);
+    DrawText("Carregar Jogo", textX, startOptionsY + spacing, fontSize, ORANGE);
+
+    // [S] Salvar
+    DrawText("[S]", keyX, startOptionsY + spacing * 2, fontSize, MAGENTA);
+    DrawText("Salvar Jogo", textX, startOptionsY + spacing * 2, fontSize, MAGENTA);
+
+    // [V] Voltar
+    DrawText("[V]", keyX, startOptionsY + spacing * 3, fontSize, GREEN);
+    DrawText("Voltar ao Jogo", textX, startOptionsY + spacing * 3, fontSize, GREEN);
+
+    // [Q] Sair
+    DrawText("[Q]", keyX, startOptionsY + spacing * 4, fontSize, RED);
+    DrawText("Sair do Jogo", textX, startOptionsY + spacing * 4, fontSize, RED);
     
-    yPos = startY + (spacing * 2);
-    DrawRectangle(opcaoX - 5, yPos - 5, 80, 35, (Color){255, 200, 100, 50});
-    DrawRectangle(opcaoX, yPos, 70, 25, (Color){255, 200, 100, 100});
-    DrawText("[C]", opcaoX + 10, yPos + 3, 20, WHITE);
-    DrawText("Carregar Jogo", opcaoX + 90, yPos + 3, 20, (Color){255, 200, 100, 255});
+    // 5. Rodapé Informativo
+    DrawLine(boxX + 20, boxY + boxHeight - 60, boxX + boxWidth - 20, boxY + boxHeight - 60, GRAY);
     
-    yPos = startY + (spacing * 3);
-    DrawRectangle(opcaoX - 5, yPos - 5, 80, 35, (Color){0, 255, 0, 50});
-    DrawRectangle(opcaoX, yPos, 70, 25, (Color){0, 255, 0, 100});
-    DrawText("[ESC]", opcaoX + 3, yPos + 3, 20, WHITE);
-    DrawText("Voltar ao Jogo", opcaoX + 90, yPos + 3, 20, GREEN);
-    
-    yPos = startY + (spacing * 4);
-    DrawRectangle(opcaoX - 5, yPos - 5, 80, 35, (Color){255, 0, 0, 50});
-    DrawRectangle(opcaoX, yPos, 70, 25, (Color){255, 0, 0, 100});
-    DrawText("[Q]", opcaoX + 10, yPos + 3, 20, WHITE);
-    DrawText("Sair do Jogo", opcaoX + 90, yPos + 3, 20, RED);
-    
-    const char* dica = "Pressione TAB para despausar rapidamente";
-    int larguraDica = MeasureText(dica, 14);
-    DrawText(dica, screenWidth / 2 - larguraDica / 2, boxY + boxHeight + 20, 14, (Color){200, 200, 200, 200});
-    
-    char infoScore[64];
-    sprintf(infoScore, "Pontuacao Atual: %d", game->score);
-    DrawText(infoScore, boxX + 20, boxY + boxHeight - 35, 16, YELLOW);
-    
-    char infoVidas[64];
-    sprintf(infoVidas, "Vidas: %d | Nivel: %d", game->lives, game->currentLevel);
-    DrawText(infoVidas, boxX + 20, boxY + boxHeight - 15, 16, LIGHTGRAY);
+    char infoGame[128];
+    sprintf(infoGame, "Score: %06d   |   Vidas: %d   |   Nivel: %d", game->score, game->lives, game->currentLevel);
+    int larguraInfo = MeasureText(infoGame, 20);
+    DrawText(infoGame, screenWidth / 2 - larguraInfo / 2, boxY + boxHeight - 40, 20, LIGHTGRAY);
 }
 
-// Função principal de gerenciamento do menu
 void HandlePauseMenu(Game* game, bool* shouldQuit, bool* shouldStartNew) {
-    
     if (IsKeyPressed(KEY_N)) { 
         *shouldStartNew = true;
         game->isPaused = false;
     } 
     else if (IsKeyPressed(KEY_S)) { 
         if (SaveGame(game)) {
-            printf("Jogo salvo com sucesso!\n");
+            printf("Jogo salvo!\n");
             game->saveMessageTimer = 2.0f;
         }
     } 
     else if (IsKeyPressed(KEY_C)) { 
         if (LoadGame(game)) {
             game->isPaused = false;
-            printf("Jogo carregado com sucesso!\n");
-        } else {
-            printf("Nenhum save encontrado!\n");
+            printf("Jogo carregado!\n");
         }
     } 
     else if (IsKeyPressed(KEY_Q)) { 
         *shouldQuit = true;
     } 
-    // --- ALTERAÇÃO AQUI: REMOVIDO O KEY_TAB PARA NÃO CONFLITAR COM A MAIN ---
     else if (IsKeyPressed(KEY_V) || IsKeyPressed(KEY_ESCAPE)) { 
         game->isPaused = false; 
     }
 }
 
-// --- Funções do Ranking (CÓDIGO ORIGINAL MANTIDO) ---
-
+// --- Funções de Ranking ---
 void LoadRanking(int scores[MAX_RANKING_SCORES]) {
-    for (int i = 0; i < MAX_RANKING_SCORES; i++) {
-        scores[i] = 0;
-    }
-
+    for (int i = 0; i < MAX_RANKING_SCORES; i++) scores[i] = 0;
     FILE* file = fopen(RANKING_FILENAME, "rb");
     if (file != NULL) {
         fread(scores, sizeof(int), MAX_RANKING_SCORES, file);
@@ -202,10 +198,8 @@ void UpdateAndSaveRanking(Game* game) {
         for (int i = MAX_RANKING_SCORES - 1; i > newRank; i--) {
             scores[i] = scores[i - 1];
         }
-
         scores[newRank] = game->score;
         sprintf(game->rankingMessage, "Voce obteve a %da maior pontuacao!", newRank + 1);
-
         FILE* file = fopen(RANKING_FILENAME, "wb");
         if (file != NULL) {
             fwrite(scores, sizeof(int), MAX_RANKING_SCORES, file);

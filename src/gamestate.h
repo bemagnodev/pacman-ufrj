@@ -2,7 +2,7 @@
 #define GAMESTATE_H
 
 #include "game.h"
-#include <stdbool.h>
+
 
 // Estados possíveis do jogo
 typedef enum {
@@ -15,11 +15,11 @@ typedef enum {
 
 // Constantes de gameplay
 #define INVULNERABILITY_TIME 2.0f  // Tempo de invulnerabilidade após morte (segundos)
-#define GHOST_COLLISION_DISTANCE 15.0f  // Distância para detectar colisão
+#define GHOST_COLLISION_DISTANCE 30.0f  // Distância para detectar colisão
 #define POINTS_PER_PELLET 10
 #define POINTS_PER_POWER_PELLET 50
-#define POINTS_PER_GHOST 200
-#define PENALTY_DEATH 100  // Pontos perdidos ao morrer
+#define POINTS_PER_GHOST 100
+#define PENALTY_DEATH 200  // Pontos perdidos ao morrer
 #define INITIAL_LIVES 3
 #define MAX_LEVEL 3
 
