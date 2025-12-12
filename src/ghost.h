@@ -10,7 +10,7 @@ void UpdateGhosts(Game* game, float delta);
 void DrawGhosts(Game* game);
 
 void UnloadGhosts(Game* game);
-
+    
 void ScareGhosts(Game* game);
 
 #endif 

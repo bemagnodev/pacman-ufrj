@@ -3,7 +3,7 @@
 #include <math.h>
 #include <float.h> 
 
-// Verifica se uma posição tem parede
+// Verifica se uma posição esta dentro dos limites e não é paprede
 bool IsValidTile(Game* game, int gridX, int gridY) {
     if (gridX < 0 || gridX >= game->mapa->colunas) return false;
     if (gridY < 0 || gridY >= game->mapa->linhas) return false;
@@ -11,7 +11,7 @@ bool IsValidTile(Game* game, int gridX, int gridY) {
     return true;
 }
 
-// Verifica se existe algum fantasma (ativo) em uma coordenada específica da grade
+// Verifica colisão entre fantasmas para evitar sobreposição
 bool IsGhostAtTile(Game* game, int gridX, int gridY, int ignoreIndex) {
     for (int i = 0; i < game->ghostCount; i++) {
         if (i == ignoreIndex) continue; // Não verifica a si mesmo
@@ -28,6 +28,7 @@ bool IsGhostAtTile(Game* game, int gridX, int gridY, int ignoreIndex) {
     return false;
 }
 
+// Inicializa o vetor de fantasmas via Alocação Dinâmica, definindo (posição, cor e Direção)
 void InitGhosts(Game* game) {
     if (game->mapa == NULL) return;
 
@@ -41,39 +42,49 @@ void InitGhosts(Game* game) {
         int gridX = game->mapa->fantasmas_inicio[i].x;
         int gridY = game->mapa->fantasmas_inicio[i].y;
 
+        // Define posição inicial em pixels
         game->ghosts[i].position = (Vector2){ (float)(gridX * TAMANHO_BLOCO), (float)(gridY * TAMANHO_BLOCO) };
+        // Cores cíclicas (Vermelho, Rosa, Ciano, Laranja)
         game->ghosts[i].originalColor = cores[i % 4];
         game->ghosts[i].color = game->ghosts[i].originalColor;
         
+        // Direção inicial aleatória
         int r = GetRandomValue(0, 3);
         game->ghosts[i].direction = dirs[r]; 
         game->ghosts[i].podeDecidir = true;
 
+        // Reset de estados
         game->ghosts[i].isVulnerable = false;
         game->ghosts[i].vulnerableTimer = 0.0f;
-        
         game->ghosts[i].isActive = true; 
     }
 }
 
+// Ativa o modo vulnerável - power pellet
 void ScareGhosts(Game* game) {
     for (int i = 0; i < game->ghostCount; i++) {
         if (!game->ghosts[i].isActive) continue; 
 
+        if (!game->ghosts[i].isVulnerable) {
+            game->ghosts[i].direction.x *= -1; // Inverte direção X
+            game->ghosts[i].direction.y *= -1; // Inverte direção Y
+        }
+
         game->ghosts[i].isVulnerable = true;
         game->ghosts[i].vulnerableTimer = 8.0f; 
-        // Nota: A cor será controlada no DrawGhosts para garantir o AZUL
+        
     }
 }
 
+// Caucula distancia euclidiana  
 float CalcularDistancia(int x1, int y1, int x2, int y2) {
     return (float)((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2));
 }
 
+// Loop principal de lógica dos fantasmas (60x/s)
 void UpdateGhosts(Game* game, float delta) {
     float margemCentro = 2.0f;
     
-    // Recuperamos o alvo (Pac-Man) para o fantasma inteligente
     int alvoX = game->pacman.gridPos.x;
     int alvoY = game->pacman.gridPos.y;
 
@@ -191,7 +202,7 @@ void UpdateGhosts(Game* game, float delta) {
     } 
 }
 
-// === DESENHO DOS FANTASMAS (VISUAL RESTAURADO) ===
+// Desenha fantasmas
 void DrawGhosts(Game* game) {
     int offset = TAMANHO_BLOCO / 2;
     int raioCabeca = (TAMANHO_BLOCO / 2) - 2; 
@@ -203,9 +214,8 @@ void DrawGhosts(Game* game) {
         int gy = (int)game->ghosts[i].position.y + offset;
         Color corFantasma = game->ghosts[i].color;
 
-        // VISUAL ANTIGO RESTAURADO: Fica AZUL quando vulnerável
+        // Fica AZUL quando vulnerável  
         if (game->ghosts[i].isVulnerable) {
-            // Pisca Branco no finalzinho, mas o padrão é AZUL
             if (game->ghosts[i].vulnerableTimer < 2.0f && (int)(GetTime()*10)%2==0) {
                 corFantasma = RAYWHITE; 
             } else {
@@ -224,9 +234,8 @@ void DrawGhosts(Game* game) {
         DrawCircle(gx, gy + raioCabeca - 2, peRaio, corFantasma);
         DrawCircle(gx + raioCabeca - peRaio, gy + raioCabeca - 2, peRaio, corFantasma);
 
-        // 4. Rosto (Olhos vs Carinha Assustada)
+        // 4. Rosto  
         if (!game->ghosts[i].isVulnerable) {
-            // --- MODO NORMAL: OLHOS E PUPILAS ---
             int olhoOffsetX = 4;
             if(TAMANHO_BLOCO > 30) olhoOffsetX = 8;
             int olhoOffsetY = -2;
@@ -242,12 +251,11 @@ void DrawGhosts(Game* game) {
             DrawCircle(gx - olhoOffsetX + pupilaOffsetX, gy + olhoOffsetY + pupilaOffsetY, pupilaRaio, DARKBLUE);
             DrawCircle(gx + olhoOffsetX + pupilaOffsetX, gy + olhoOffsetY + pupilaOffsetY, pupilaRaio, DARKBLUE);
         } else {
-            // --- MODO VULNERÁVEL: CARINHA ASSUSTADA (Original) ---
-            // Desenha boquinha torta e olhos simples
+            // MODO VULNERÁVEL
             DrawCircle(gx - 4, gy, 2, WHITE); // Olho esq pequeno
             DrawCircle(gx + 4, gy, 2, WHITE); // Olho dir pequeno
             
-            // Boca tremida (Wavy line)
+            // Boca tremida  
             int bocaW = raioCabeca;
             DrawLine(gx - bocaW/2, gy + 5, gx - bocaW/4, gy + 3, WHITE);
             DrawLine(gx - bocaW/4, gy + 3, gx + bocaW/4, gy + 5, WHITE);
@@ -256,9 +264,10 @@ void DrawGhosts(Game* game) {
     }
 }
 
+//evita vazamento do memoria
 void UnloadGhosts(Game* game) {
     if (game->ghosts != NULL) {
-        free(game->ghosts);
+        free(game->ghosts);// Libera a memória do malloc
         game->ghosts = NULL;
     }
 }
