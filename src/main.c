@@ -6,7 +6,7 @@
 #include "pacman.h"
 #include <stdlib.h>
 #include <stdio.h>
-// ryan
+
 int main(void) {
     // Calcula o tamanho da tela baseado nas constantes do game.h
     const int screenWidth = COLUNAS * TAMANHO_BLOCO; 
@@ -50,7 +50,7 @@ int main(void) {
             ToggleFullscreen();
         }
 
-        // --- NOVA FUNCIONALIDADE: TECLA M (MUTE) ---
+        // --- TECLA M (MUTE) ---
         if (IsKeyPressed(KEY_M)) {
             game.isMuted = !game.isMuted;
             // Se estiver mutado volume = 0, senão volume = 1
@@ -68,9 +68,7 @@ int main(void) {
             tabWasPressed = tabIsPressed;
         }
 
-        // ==========================================
         // ATUALIZAÇÃO (UPDATE)
-        // ==========================================
         if (game.saveMessageTimer > 0) {
             game.saveMessageTimer -= delta;
         }
@@ -95,10 +93,7 @@ int main(void) {
             UpdateGameState(&game, &state, delta);
         }
 
-        // ==========================================
         // RENDERIZAÇÃO (DRAW)
-        // ==========================================
-        
         BeginDrawing();
         ClearBackground(BLACK); 
         
@@ -143,7 +138,7 @@ int main(void) {
                 break;
         }
 
-        // --- ÍCONE DE MUTE (Visual Opcional) ---
+        // --- ÍCONE DE MUTE ---
         // Desenha um aviso pequeno no canto se estiver mudo
         if (game.isMuted) {
             DrawText("MUDO", screenWidth - 60, 10, 20, RED);
@@ -151,10 +146,8 @@ int main(void) {
         
         EndDrawing();
     }
-
-    // ==========================================
+    
     // LIMPEZA
-    // ==========================================
     UnloadSound(game.sfxIntro);
     UnloadSound(game.sfxWaka);
     UnloadSound(game.sfxEatGhost);

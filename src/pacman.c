@@ -132,11 +132,10 @@ void DrawPacman(Game* game) {
     else if (game->pacman.direcaoAtual.y == -1) rotation = 270.0f;
     else if (game->pacman.direcaoAtual.y == 1) rotation = 90.0f;
     
-    // 2. Animação da boca (VELOCIDADE ATUALIZADA: 20.0f)
-    // Se quiser ainda mais rápido, aumente para 30.0f
+    // 2. Animação da boca
     float mouthOpen = fabs(sinf(GetTime() * 20.0f)) * 45.0f;
     
-    // Se estiver parado, mantém a boca aberta (estética clássica)
+    // Se estiver parado, mantém a boca aberta
     if (game->pacman.direcaoAtual.x == 0 && game->pacman.direcaoAtual.y == 0) {
         mouthOpen = 45.0f; 
     }

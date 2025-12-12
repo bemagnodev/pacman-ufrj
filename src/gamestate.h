@@ -23,8 +23,7 @@ typedef enum {
 #define INITIAL_LIVES 3
 #define MAX_LEVEL 3
 
-// Variáveis adicionais necessárias na struct Game
-// (Adicionar no game.h se necessário)
+// Variáveis adicionais necessárias 
 typedef struct {
     GameScreen currentScreen;
     float invulnerabilityTimer;

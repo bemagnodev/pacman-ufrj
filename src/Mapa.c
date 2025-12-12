@@ -9,19 +9,20 @@
 
 
 Mapa* lerMapa(const char *arquivo){
-    FILE* f = fopen(arquivo, "r");
+    FILE* f = fopen(arquivo, "r"); //abre o arquivo para leitura
     if (f == NULL) {
         perror("Erro ao abrir o arquivo do mapa");
         return NULL;
     }
 
-    Mapa* mapa = (Mapa*) malloc(sizeof(Mapa));
+    Mapa* mapa = (Mapa*) malloc(sizeof(Mapa)); //aloca dinamicamente o mapa
     if(mapa == NULL){
         perror("Erro ao alocar memória para o mapa");
         fclose(f);
         return NULL;
     }
 
+    //inicializa informações
     mapa->numPellets = 0;
     mapa->numFantasmas = 0;
     mapa->fantasmas_inicio = NULL;
@@ -30,7 +31,7 @@ Mapa* lerMapa(const char *arquivo){
     mapa->linhas = LINHAS;
     mapa->colunas = COLUNAS;
 
-    mapa->matriz = (Blocos**) malloc(sizeof(Blocos*) * mapa->linhas);
+    mapa->matriz = (Blocos**) malloc(sizeof(Blocos*) * mapa->linhas); //alocação dinânimca(linhas)
     if (mapa->matriz == NULL) {
         perror("Erro ao alocar memória para as linhas do mapa");
         free(mapa);
@@ -39,7 +40,7 @@ Mapa* lerMapa(const char *arquivo){
     }
 
     for(int i = 0; i < mapa->linhas; i++){
-        mapa->matriz[i] = (Blocos*) malloc(sizeof(Blocos) * mapa->colunas);
+        mapa->matriz[i] = (Blocos*) malloc(sizeof(Blocos) * mapa->colunas);//alocação dinânimca(colunas)
         if (mapa->matriz[i] == NULL) {
             perror("Erro ao alocar memória para as colunas do mapa");
             
@@ -64,6 +65,7 @@ Mapa* lerMapa(const char *arquivo){
             return NULL;
         }
 
+        //percorre o texto e preenche a matriz, atualizando as informações
         for (int j = 0; j < mapa->colunas; j++) {
             switch (buffer[j]) {
                 case '#':
@@ -122,9 +124,11 @@ void printarMapa(Mapa* mapa){
     for(int i = 0; i < mapa->linhas; i++){
         for(int j = 0; j < mapa->colunas; j++){
             
+            //centraliza de acordo com o tamanho do bloco
             int posX = j * tb;
             int posY = i * tb;
 
+            //desenha o mapa
             if(mapa->matriz[i][j] == PAREDE){
                 DrawRectangle(posX, posY, tb, tb, BLUE);
             }
@@ -134,17 +138,13 @@ void printarMapa(Mapa* mapa){
             }
 
             else if(mapa->matriz[i][j] == POWER_PELLET){
-                // Fundo preto (limpar parede se houver)
-                // DrawRectangle(posX, posY, tb, tb, BLACK); 
                 DrawCircle(posX + offset, posY + offset, tb/3, GREEN); // Raio proporcional
             }
 
             else if(mapa->matriz[i][j] == PELLET){
-                // DrawRectangle(posX, posY, tb, tb, BLACK);
                 DrawCircle(posX + offset, posY + offset, tb/8, WHITE); // Raio bem pequeno
             }
             
-            // VAZIO não precisa desenhar nada (já é o fundo preto da janela)
         }
     }
 }
@@ -152,6 +152,7 @@ void printarMapa(Mapa* mapa){
 void descartarMapa(Mapa* mapa) {
     if (mapa == NULL) return;
 
+    //libera a memória alocada
     for (int i = 0; i < mapa->linhas; i++) {
         free(mapa->matriz[i]);
     }

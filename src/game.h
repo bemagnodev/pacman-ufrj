@@ -3,16 +3,11 @@
 
 #include "raylib.h"
 #include <stdlib.h> 
-// O compilador já reconhece bool, true e false nativamente (C23) ou via raylib.h
-// Portanto, não precisamos definir manualmente.
 
-// --- Constantes Globais ---
 #define LINHAS 20
 #define COLUNAS 40
-// Tamanho 40 para alta resolução (1600x840)
-#define TAMANHO_BLOCO 40 
+#define TAMANHO_BLOCO 40  // Tamanho 40 para alta resolução (1600x840)
 
-// --- Enums ---
 typedef enum {
     PAREDE,
     PELLET,
@@ -100,7 +95,7 @@ typedef struct {
 
 } Game;
 
-// --- Protótipos Globais ---
+// --- Funções de Renderização ---
 Mapa* lerMapa(const char *arquivo);
 void printarMapa(Mapa* mapa);
 void descartarMapa(Mapa* mapa);

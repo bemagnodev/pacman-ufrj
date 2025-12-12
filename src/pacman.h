@@ -1,10 +1,3 @@
-/*
- * ARQUIVO: pacman.h
- *
- * DESCRIÇÃO:
- * Interface para movimentação e desenho do Pac-Man
- */
-
 #ifndef PACMAN_H
 #define PACMAN_H
 

@@ -21,7 +21,6 @@ void InitGameState(Game* game, GameState* state) {
     game->currentLevel = 1;
     game->gameOver = false;
     game->isPaused = false;
-    // game->isMuted é inicializado na main.c
 }
 
 void StartNewGame(Game* game, GameState* state) {
@@ -261,7 +260,7 @@ void DrawMenuScreen(void) {
     }
 }
 
-// === TELA DE GAME OVER COM RANKING (CORRIGIDA) ===
+// === TELA DE GAME OVER COM RANKING ===
 void DrawGameOverScreen(Game* game) {
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
@@ -288,7 +287,7 @@ void DrawGameOverScreen(Game* game) {
         DrawText(game->rankingMessage, screenWidth / 2 - l / 2, 220, 30, YELLOW);
     }
 
-    // --- 5. TABELA DE RANKING (AQUI ESTÁ O QUE FALTAVA) ---
+    // 5. Tabela de Ranking
     int scores[MAX_RANKING_SCORES];
     LoadRanking(scores); // Carrega os dados do arquivo
 
@@ -322,6 +321,7 @@ void DrawGameOverScreen(Game* game) {
     }
 }
 
+// === TELA DE VITÓRIA ===
 void DrawVictoryScreen(Game* game) {
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
@@ -351,6 +351,7 @@ void DrawVictoryScreen(Game* game) {
     DrawText(aguarde, screenWidth / 2 - larguraAguarde / 2, screenHeight / 2 + 100, tamanhoAguarde, LIGHTGRAY);
 }
 
+// === TROCA DE NÍVEIS ===
 void DrawLevelTransition(Game* game, GameState* state) {
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
@@ -364,6 +365,7 @@ void DrawLevelTransition(Game* game, GameState* state) {
     DrawText(levelText, screenWidth / 2 - largura / 2, screenHeight / 2 - 50, tamanho, YELLOW);
 }
 
+// === HEADS-UP DISPLAY ===
 void DrawHUD(Game* game, GameState* state) {
     int screenWidth = GetScreenWidth();
     int hudY = LINHAS * TAMANHO_BLOCO + 5; 

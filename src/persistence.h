@@ -2,7 +2,6 @@
 #define PERSISTENCE_H
 
 #include "game.h"
-// REMOVIDO: #include <stdbool.h> (Já definido em game.h)
 
 #define SAVEGAME_FILENAME "savegame.bin"
 #define RANKING_FILENAME "ranking.bin"
